@@ -9,11 +9,12 @@ num_alumnes = 0
 CAR_INICIAL = 203
 CAR_FINAL = 270
 CARPETA_NOTES = "./notes_separades"
+expresio_regular = r'Alumne\s*(DNI|NIE|Passaport)\s*Grup\s*\n*(.*?)\s*CFP(M|S)'
 
 def open_pdf_reader(nom):
 	try:
 		pdf_file = open(nom, 'rb')
-		pdf_reader = PyPDF2.PdfFileReader(nom)
+		pdf_reader = PyPDF2.PdfReader(nom)
 		return pdf_reader
 		
 	except FileNotFoundError:
@@ -31,7 +32,7 @@ def close_src_pdf():
 #Mètode principal
 def trenca_notes_en_alumnes(fitxer):
 	reader = open_pdf_reader(fitxer)
-	pdf_writer = PyPDF2.PdfFileWriter()
+	pdf_writer = PyPDF2.PdfWriter()
 	
 	alumne_anterior = None
 	al = None
@@ -56,7 +57,7 @@ def trenca_notes_en_alumnes(fitxer):
 		#print("DEBUG: ",al)
 	
 		if al == alumne_anterior:
-			pdf_writer.addPage(page) #Afegim al buffer la pàgina
+			pdf_writer.add_page(page) #Afegim al buffer la pàgina
 
 		# Si canviem d'alumne escrivim el que tenim		
 		else:
@@ -65,11 +66,11 @@ def trenca_notes_en_alumnes(fitxer):
 			
 			save_buffer_to_pdf(nom_pdf_alumne, pdf_writer)
 			
-			pdf_writer = PyPDF2.PdfFileWriter() #Reset del buffer
+			pdf_writer = PyPDF2.PdfWriter() #Reset del buffer
 			
 			#num_alumnes += 1
 			
-			pdf_writer.addPage(page) #pàgina actual al buffer nou
+			pdf_writer.add_page(page) #pàgina actual al buffer nou
 			#Fins al proper
 			alumne_anterior = al
 	
@@ -84,14 +85,6 @@ def trenca_notes_en_alumnes(fitxer):
 	print(f"DEBUG: guardant - {alumne_anterior[-1]} - pdf='{nom_pdf_alumne}'")
 	
 	save_buffer_to_pdf(nom_pdf_alumne, pdf_writer)
-	'''
-	pdf_sortida = open(nom_pdf_alumne, 'wb')
-			
-	pdf_writer.write(pdf_sortida)
-	pdf_sortida.close()
-
-	#num_alumnes +=1
-	'''	
 	close_src_pdf()
 	print(f"Num butlletins totals = {num_alumnes}")
 
@@ -114,19 +107,20 @@ def get_nom_pdf(alumne):
 
 def find_alumne_en_pagina(pag):
 	#print("buscant alumne")
-	page_text = pag.extractText()
+	page_text = pag.extract_text()
 	
 	if page_text == "":
 		return None
 		
-	#print(f"DEBUG: extracte->'{page_text[CAR_INICIAL-10:CAR_FINAL]}'")
+	#print(f"DEBUG: extracte->'{page_text[CAR_INICIAL-10:CAR_FINAL+25]}'")
+	
 	#Tallem la cadena de l'alumne entre els textos anteriors i posteriors
-	txt_nom = re.search(r'Alumne(DNI|NIE|Passaport)Grup(.*?)CFPS', page_text).group(2)
+	txt_nom = re.search(expresio_regular, page_text, re.M).group(2)
 	#print(f"DEBUG: {txt_nom}")
 
 	#Tallem el NIF
 	nif = txt_nom[-9:]
-	txt_nom = txt_nom[0:-9]
+	txt_nom = txt_nom[0:-9].strip()
 	
 	return [txt_nom, nif]
 
